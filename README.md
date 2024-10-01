@@ -39,7 +39,7 @@
 
 [4] B van Sweden, B Kemp, HAC Kamphuisen, EA van der Velde. Alternative electrode placement in (automatic) sleep scoring (Fpz-Cz/Pz-Oz versus C4-A1/C3-A2). Sleep 13(3):279–283 (1990).
 
-[5]B Kemp, A Värri, AC Rosa, KD Nielsen, J Gade. A simple format for exchange of digitized polygraphic recordings. Electroencephalography and Clinical Neurophysiology 82:391–393 (1992).
+[5] B Kemp, A Värri, AC Rosa, KD Nielsen, J Gade. A simple format for exchange of digitized polygraphic recordings. Electroencephalography and Clinical Neurophysiology 82:391–393 (1992).
 
 [6] B Kemp, J Olivan. European data format 'plus' (EDF+), an EDF alike standard format for the exchange of physiological data. Clinical Neurophysiology 114:1755–1761 (2002).
 

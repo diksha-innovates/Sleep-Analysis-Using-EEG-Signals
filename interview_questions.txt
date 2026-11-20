@@ -1,0 +1,153 @@
+SLEEP EEG ANALYSIS PROJECT - INTERVIEW QUESTIONS (50)
+======================================================
+Organized by topic. Use these to rehearse explaining design decisions,
+trade-offs, and the underlying domain knowledge behind this project.
+
+
+SECTION 1: EEG / PSG / Sleep Science Fundamentals (1-10)
+---------------------------------------------------------
+1. What is polysomnography (PSG), and which signals does it typically record
+   besides EEG?
+2. What do the Fpz-Cz and Pz-Oz electrode placements refer to, and why are
+   those specific sites used in the Sleep-EDF dataset?
+3. What are the five sleep stages used in AASM scoring (Wake, N1, N2, N3,
+   REM), and what distinguishes each one in the EEG?
+4. Why does the older Rechtschaffen & Kales standard have stages 3 and 4
+   while AASM merges them into a single N3 stage?
+5. Why is a 30-second epoch the standard scoring window for sleep staging?
+6. What EEG frequency bands (delta, theta, alpha, sigma, beta) are
+   physiologically associated with which sleep stages?
+7. What is a sleep spindle, which frequency band is it found in, and which
+   sleep stage is it a hallmark of?
+8. Why is EOG (eye movement) recorded alongside EEG for sleep staging, and
+   what role does it play in identifying REM sleep?
+9. What is "sleep architecture," and how would you describe a typical
+   night's progression through stages/cycles?
+10. What are the clinical differences between sleep apnea, insomnia,
+    narcolepsy, and restless legs syndrome, and why can't frequency-band EEG
+    power alone diagnose any of them?
+
+
+SECTION 2: Signal Processing (11-22)
+---------------------------------------------------------
+11. Why is a band-pass filter (0.5-40 Hz) applied to raw EEG before
+    analysis? What would happen if you skipped it?
+12. What's the difference between a FIR and an IIR filter, and why did this
+    project use the FIR method in MNE?
+13. What does "setting an EEG reference" do, and why does average
+    referencing matter for downstream analysis?
+14. How do you detect a "flat"/dead EEG channel programmatically, and why
+    should such channels be removed before filtering/ICA?
+15. What is Independent Component Analysis (ICA), and what artifacts (eye
+    blinks, muscle activity, line noise) is it typically used to remove from
+    EEG?
+16. Why can ICA be computationally expensive on a full overnight recording,
+    and how would you mitigate that (e.g. downsampling, limiting
+    components)?
+17. What is the difference between computing a single FFT over an entire
+    signal versus using Welch's method for power spectral density
+    estimation?
+18. Why is Welch's method generally preferred over a raw FFT for noisy,
+    non-stationary biological signals like EEG?
+19. How do you compute the "power" within a specific frequency band from a
+    power spectral density estimate (e.g. integrating/summing PSD values
+    between two frequency cutoffs)?
+20. What is spectral leakage, and how do windowing functions in Welch's
+    method help reduce it?
+21. Why does this project normalize/compute ratios (e.g. delta/total,
+    alpha/beta) instead of using raw band power values directly as
+    features?
+22. What's the risk of computing band power over an entire 24-hour
+    recording as one block instead of per 30-second epoch?
+
+
+SECTION 3: Feature Engineering & Sleep-Stage Classification (23-30)
+---------------------------------------------------------
+23. How are hypnogram annotations (e.g. "Sleep stage W", "Sleep stage R")
+    converted into aligned, fixed-length labeled epochs for supervised
+    learning?
+24. Why must EEG epochs and their corresponding hypnogram labels be matched
+    by timestamp/event rather than assumed to line up by index?
+25. What features would you extract per epoch to discriminate between sleep
+    stages, beyond simple band power (e.g. spectral edge frequency,
+    Hjorth parameters, entropy measures)?
+26. Why is the sleep-stage classification problem inherently class
+    imbalanced (e.g. much more N2 than N1), and what techniques handle that
+    (class weighting, resampling, stratified splits)?
+27. Why should a classifier for this task be evaluated with a
+    subject-independent split (train on some subjects, test on unseen
+    subjects) rather than randomly splitting epochs from the same subject?
+28. What's the risk of "leakage" between adjacent epochs within the same
+    night when doing a random (non-chronological, non-subject-level) train/
+    test split?
+29. Why was Random Forest chosen as a baseline classifier here, and what
+    other models (SVM, gradient boosting, CNN/LSTM on raw signal) could you
+    compare it against?
+30. How would you incorporate temporal context (the previous epoch's stage)
+    into the classifier, given that sleep stages rarely change epoch-to-
+    epoch?
+
+
+SECTION 4: Classifier Evaluation Metrics (31-38)
+---------------------------------------------------------
+31. Why is plain accuracy a misleading metric for an imbalanced multi-class
+    problem like sleep staging?
+32. What does "balanced accuracy" correct for compared to raw accuracy?
+33. What is Cohen's Kappa, and why is it commonly reported in sleep-staging
+    literature (comparing agreement against human scorers)?
+34. What is the Matthews Correlation Coefficient (MCC), and why is it
+    considered robust under class imbalance compared to F1-score?
+35. What's the difference between macro-averaged and weighted-averaged
+    precision/recall/F1, and when would you prefer one over the other?
+36. How do you read a confusion matrix to identify which sleep stages are
+    most commonly confused with each other (e.g. N1 vs. REM)?
+37. Why might N1 typically have the lowest per-class recall/F1 of all five
+    stages in sleep-staging models (hint: transitional, short-duration,
+    ambiguous EEG signature)?
+38. If you had to pick a single metric to report to a non-technical
+    stakeholder, which would you choose and why?
+
+
+SECTION 5: Time-Series Modeling (39-48)
+---------------------------------------------------------
+39. What does it mean for a time series to be "stationary," and why do
+    ARIMA-family models require (or difference the data to achieve) it?
+40. What do the (p, d, q) parameters in ARIMA represent?
+41. What additional parameters does SARIMA add over ARIMA, and what do they
+    capture that plain ARIMA cannot?
+42. How would you choose a sensible seasonal period for a SARIMA model
+    applied to overnight sleep EEG band power (hint: ~90-minute sleep
+    cycles)?
+43. What does Auto-ARIMA (pmdarima) do differently from manually specifying
+    ARIMA orders, and what criterion (e.g. AIC) does it optimize to pick
+    them?
+44. How does Holt-Winters Exponential Smoothing differ fundamentally from
+    ARIMA in how it models trend and seasonality?
+45. What is Prophet designed for, and why might it be a poor or good fit
+    for a short, single-night, non-daily-seasonal biological signal like
+    this one?
+46. Why does an LSTM need a "lookback window," and how does that windowing
+    turn a time-series forecasting problem into a supervised learning
+    problem?
+47. Why must a time-series train/test split be chronological (train on the
+    earlier part of the night, test on the later part) rather than a random
+    shuffle split?
+48. Comparing all six models (ARIMA, SARIMA, Holt-Winters, Auto-ARIMA,
+    Prophet, LSTM) by RMSE/MAE/MAPE -- what would it mean if a simple model
+    like Holt-Winters outperformed LSTM here, given how little data a
+    single night provides?
+
+
+SECTION 6: Project Architecture & Engineering Decisions (49-50)
+---------------------------------------------------------
+49. Why was this project refactored from a single notebook into separate
+    modules (config.py, data_loader.py, preprocessing.py, features.py,
+    classifier.py, timeseries_models.py, evaluation.py, visualization.py,
+    main.py)? What specific benefits does that separation give you when
+    testing or extending one piece (e.g. swapping the classifier) without
+    touching the rest?
+50. The original notebook computed its "accuracy" and classification
+    metrics on fabricated/hardcoded data instead of real model output. How
+    would you catch that kind of issue in a code review, and what practice
+    (e.g. asserting data provenance, integration tests, not hardcoding
+    "example" arrays next to real pipeline code) would prevent it?

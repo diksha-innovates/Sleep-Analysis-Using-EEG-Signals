@@ -1,0 +1,9 @@
+data/raw/
+results/*.csv
+figures/*.png
+__pycache__/
+*.pyc
+.venv/
+venv/
+kaggle.json
+.ipynb_checkpoints/

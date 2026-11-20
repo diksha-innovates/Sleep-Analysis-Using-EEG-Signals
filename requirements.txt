@@ -1,0 +1,19 @@
+# Core
+numpy
+pandas
+matplotlib
+seaborn
+scikit-learn
+
+# EEG/EDF I/O and signal processing
+mne
+
+# Time-series models
+statsmodels
+pmdarima          # Auto-ARIMA. If install fails on your numpy version, the
+                   # pipeline will just skip Auto-ARIMA (see timeseries_models.py).
+prophet            # Needs cmdstanpy/CmdStan; heavier install. Skipped gracefully if absent.
+tensorflow         # For the LSTM model. Skipped gracefully if absent.
+
+# Dataset download
+kaggle

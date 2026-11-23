@@ -28,6 +28,18 @@ classifier, a real EEG-derived time series for the forecasting models, and
 a disorder heuristic referenced against each recording's own baseline
 instead of an arbitrary constant.
 
+A further fix: the classifier's train/test split is now subject-aware
+(`classifier.py`'s `groups` parameter, wired up in `main.py`). Epochs from
+the same subject are correlated (same brain, same electrodes, same night),
+so a plain per-epoch split let one subject's epochs land in both train and
+test, letting the model partly memorize that subject instead of
+generalizing. With 2+ subjects processed, `GroupShuffleSplit` now keeps
+every subject entirely on one side. **Known limitation:** with
+`--n-subjects 1` there's nothing to group by, so it falls back to a
+per-epoch split and `main.py` prints a warning that those metrics are
+optimistic -- the default (`config.N_SUBJECTS = 3`) and anything `>= 2`
+gets the trustworthy, subject-independent evaluation.
+
 ## Architecture
 
 ```
@@ -37,13 +49,33 @@ data_loader.py        finds & pairs PSG/Hypnogram files, loads with mne
 preprocessing.py       flat-channel removal, band-pass filter, optional ICA
 features.py           epochs raw signal to 30s windows, extracts band-power features + labels
 disorder_detection.py  heuristic band-power screening (self-referenced, not diagnostic)
-classifier.py          trains/evaluates a real RandomForest sleep-stage classifier
+classifier.py          trains/evaluates a real RandomForest sleep-stage classifier (subject-grouped split)
 timeseries_models.py  ARIMA, SARIMA, Holt-Winters, Auto-ARIMA, Prophet, LSTM on real band-power trend
 evaluation.py          classification + regression metrics shared by the above
 visualization.py       saves all plots to figures/
 main.py                orchestrates the full pipeline end to end
+tests/                 pytest suite covering all modules above on synthetic data (CI-friendly, no real EDF files needed)
 interview_questions.txt  50 interview questions covering this project's domain
 ```
+
+## Testing
+
+```bash
+pip install -r requirements-dev.txt
+pytest -v
+```
+
+The suite runs entirely on synthetic data (fake multi-channel EEG with
+hypnogram-style annotations, synthetic band-power feature tables) so it
+needs no real dataset or Kaggle credentials, and runs in CI
+(`.github/workflows/tests.yml`) on every push/PR. It covers: epoching +
+feature extraction (including a regression test for a recording missing a
+stage entirely, which used to crash `mne.Epochs`), the classifier's
+subject-grouped split (asserts train/test subjects are disjoint),
+classification/regression metrics, the disorder-screening heuristic, and
+every time-series model (including that optional-dependency models report
+"skipped" rather than crashing when pmdarima/prophet/tensorflow aren't
+installed).
 
 ## Setup
 

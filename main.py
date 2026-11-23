@@ -53,7 +53,7 @@ def main():
             "Run with --download, or point config.RAW_DIR at your local copy of the dataset."
         )
 
-    all_X, all_y = [], []
+    all_X, all_y, all_groups = [], [], []
     representative_features = None  # used for disorder screening + time-series modeling
 
     for recording in pairs:
@@ -62,6 +62,7 @@ def main():
             continue
         all_X.append(X)
         all_y.append(y)
+        all_groups.extend([recording.subject_id] * len(X))
         if representative_features is None:
             representative_features = X
 
@@ -70,13 +71,25 @@ def main():
 
     X = pd.concat(all_X, ignore_index=True)
     y = pd.Series(pd.concat([pd.Series(arr) for arr in all_y], ignore_index=True))
+    groups = pd.Series(all_groups)
 
     # ---- 1. Sleep-stage classification (real labels, real predictions) ----
     print("\n=== Sleep stage classification ===")
-    present_labels = sorted(y.unique())
-    class_names = [features.stage_name(i) for i in present_labels]
+    n_subjects_used = groups.nunique()
+    if n_subjects_used < 2:
+        print(f"  WARNING: only {n_subjects_used} subject processed -- the train/test split is "
+              "per-epoch, not per-subject, so these metrics are optimistic. Run with "
+              "--n-subjects >= 2 for a subject-independent evaluation.")
+    model, scaler, X_test, y_test, y_pred, groups_test = classifier.train_sleep_stage_classifier(X, y, groups=groups)
+    if groups_test is not None:
+        print(f"  test subjects: {sorted(set(groups_test))} (disjoint from training subjects)")
 
-    model, scaler, X_test, y_test, y_pred = classifier.train_sleep_stage_classifier(X, y)
+    # Must come from the test split's actual labels, not the full dataset's --
+    # classification_report's target_names has to line up 1:1 with whatever
+    # labels actually appear in y_test/y_pred, and a group-based split can
+    # leave a rare stage entirely out of one side.
+    present_labels = sorted(set(y_test) | set(y_pred))
+    class_names = [features.stage_name(i) for i in present_labels]
     metrics = evaluation.classification_metrics(y_test, y_pred, class_names)
 
     for k, v in metrics.items():
